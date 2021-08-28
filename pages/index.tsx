@@ -1,56 +1,31 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import styles from "../styles/Home.module.scss";
+import { useForm, ValidationError } from "@formspree/react";
 
 export default function question() {
   const [name, setName] = useState("");
+  // const [email, setEmail] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+
+  const [state, handleSubmit] = useForm("mdoyynbg");
+
+  const formRef = useRef(null);
 
   const submitQuesionnaier = async (e) => {
     e.preventDefault();
 
-    const quizdata = new FormData(e.target);
-    console.log(quizdata.get("answer"));
-
-    return convertToJson(
-      "../data/quizdata.json",
-      { "New-Quiz-Data": `${Math.floor(Date.now())}` },
-      quizdata
-    );
+    const result = getFormJSON(formRef.current);
+    console.log(result);
   };
 
-  const convertToJson = async (fetchLink: string, headers: any, body: any) => {
-    if (!fetchLink || !headers || !body) {
-      throw new Error("One or more POST request parameters was not passed.");
-    }
-    try {
-      const rawResponse = await fetch(fetchLink, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(body),
-      });
-
-      const content = await rawResponse.json();
-
-      return content;
-    } catch (err) {
-      console.error(`Error at fetch POST : ${err}`);
-      throw err;
-    }
-  };
-
-  function onSubmit(e) {
-    const form = document.querySelector("form");
+  const getFormJSON = (form) => {
     const data = new FormData(form);
-    const req = new XMLHttpRequest();
-    const reqData = req.send(data);
-
-    // const jsonData = JSON.stringify( $(form).serializeArray() ); //  <-----------
-    const jsonData = JSON.stringify(reqData); //  <-----------
-
-    console.log(jsonData);
-    return false; //don't submit
-  }
+    return Array.from(data.keys()).reduce((result, key) => {
+      result[key] = data.get(key);
+      return result;
+    }, {});
+  };
 
   return (
     <>
@@ -60,10 +35,11 @@ export default function question() {
         <p>And the Answer is ... {answer}</p>
 
         <form
-          method="post"
-          action="../data/quizdata.json"
+          ref={formRef}
+          method="POST"
+          action={process.env.NEXT_APP_FORM_EMAIL}
           className={styles.form}
-          onSubmit={(e) => onSubmit(e.target)}
+          onSubmit={handleSubmit}
         >
           <label htmlFor="name">お名前(ニックネーム)： </label>
           <input
@@ -72,7 +48,18 @@ export default function question() {
             name="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
           />
+
+          {/* <label htmlFor="email">メールアドレス： </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          /> */}
 
           <label htmlFor="question">クイズ内容： </label>
           <textarea
@@ -80,6 +67,7 @@ export default function question() {
             name="question"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
+            required
           />
 
           <label htmlFor="answer">答え： </label>
@@ -88,9 +76,12 @@ export default function question() {
             name="answer"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
+            required
           />
 
-          <input type="submit" value="送信" />
+          <button type="submit" disabled={state.submitting}>
+            送信
+          </button>
         </form>
       </div>
     </>
